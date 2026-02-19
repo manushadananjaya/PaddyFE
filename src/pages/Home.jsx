@@ -69,7 +69,7 @@ export default function Home() {
           <div className="stat-label">Years of Data (2005–2023)</div>
         </div>
         <div className="stat-item">
-          <div className="stat-value">27</div>
+          <div className="stat-value">25</div>
           <div className="stat-label">Districts Covered</div>
         </div>
         <div className="stat-item">
