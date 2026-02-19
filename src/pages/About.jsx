@@ -360,7 +360,7 @@ export default function About() {
               Department of Census and Statistics (DCS), Sri Lanka
             </strong>{" "}
             — official paddy cultivation statistics for Yala and Maha seasons,
-            2005–2023, covering 27 districts. Model trained using strict
+            2005–2023, covering 25 districts. Model trained using strict
             time-based splitting (train ≤ 2020, test 2021–2023) to prevent data
             leakage.
           </p>

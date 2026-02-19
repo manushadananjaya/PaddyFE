@@ -799,6 +799,9 @@ input[type="range"]::-webkit-slider-thumb {
 
 /* Mobile */
 @media (max-width: 640px) {
+  .hide-mobile {
+    display: none !important;
+  }
   .grid-2 {
     grid-template-columns: 1fr;
   }

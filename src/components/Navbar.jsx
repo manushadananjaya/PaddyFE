@@ -54,8 +54,9 @@ export default function Navbar() {
           </NavLink>
         </div>
 
-        {/* API status badge */}
+        {/* API status badge — hidden on mobile */}
         <div
+          className="hide-mobile"
           style={{
             display: "flex",
             alignItems: "center",
