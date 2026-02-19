@@ -1,5 +1,7 @@
-// API base URL — change to production URL when hosting
-export const API_BASE = "http://localhost:8000";
+// API base URL — production backend on Render
+
+// export const API_BASE = "http://localhost:8000";
+export const API_BASE = "https://paddy-prediction.onrender.com";
 
 // Districts — API value + English + Sinhala display
 export const DISTRICTS = [
