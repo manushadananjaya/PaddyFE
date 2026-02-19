@@ -408,7 +408,7 @@ export default function Predict() {
                       opacity: 0.65,
                     }}
                   >
-                    {districtObj?.en} · {season} · {year} · {prediction.model}
+                    {districtObj?.en} · {season} · {year}
                   </div>
                   <button
                     className="btn btn-gold mt-3"
