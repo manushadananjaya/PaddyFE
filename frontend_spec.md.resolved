@@ -1,0 +1,392 @@
+# 🌾 Sri Lanka Paddy Production Prediction — Frontend Specification
+
+> **Version**: 1.0 | **Date**: February 2026
+> Share this document with your frontend developer to build the web application.
+
+---
+
+## 1. Project Overview
+
+Build a **bilingual (English + Sinhala)** web application for Sri Lankan farmers and agricultural officers to predict paddy `Total Production (MT)` for any district and season using a trained ML model.
+
+### Target Users
+- Sri Lankan farmers (mobile-first)
+- Agricultural officers (desktop)
+- Policy planners
+
+### Core Features
+1. **Predict** — Enter cultivation inputs → get production prediction (MT)
+2. **Explain** — See top 5 reasons why the model made that prediction (SHAP)
+3. **About** — Information about the model, accuracy, and how to use it
+
+---
+
+## 2. Backend API
+
+The backend is a **FastAPI** server running at:
+
+```
+http://localhost:8000
+```
+
+In production, replace with the deployed server URL.
+
+### 2.1 GET `/health`
+
+Check if the API is alive.
+
+**Response:**
+```json
+{
+  "status": "ok",
+  "model": "CatBoost",
+  "api_version": "1.0.0"
+}
+```
+
+---
+
+### 2.2 POST `/predict`
+
+Predict Total Paddy Production for one district/season.
+
+**Request body (JSON):**
+```json
+{
+  "Year": 2023,
+  "Season": "Yala",
+  "District": "AMPARA",
+  "Sown_Major": 60510,
+  "Sown_Minor": 2308,
+  "Sown_Rainfed": 366,
+  "Sown_Total": 63184,
+  "Harvest_Major": 60506,
+  "Harvest_Minor": 2304,
+  "Harvest_Rainfed": 366,
+  "Harvest_Total": 63176,
+  "Yield_Major": 4358,
+  "Yield_Minor": 3986,
+  "Yield_Rainfed": 3251,
+  "Yield_Avg": 4338,
+  "Nett_Extent": 60377
+}
+```
+
+**All numeric fields are optional** — missing values will be auto-imputed by the model. Only `Year`, `Season`, and `District` are required.
+
+**Response:**
+```json
+{
+  "predicted_total_production_mt": 261938.0,
+  "model_used": "CatBoost",
+  "input_summary": {
+    "Year": 2023,
+    "Season": "Yala",
+    "District": "AMPARA"
+  }
+}
+```
+
+---
+
+### 2.3 POST `/explain`
+
+Same input as `/predict` — additionally returns top-5 SHAP feature contributions.
+
+**Request body:** Same as `/predict`
+
+**Response:**
+```json
+{
+  "predicted_total_production_mt": 261938.0,
+  "base_value_mt": 45231.5,
+  "top_features": [
+    { "feature": "Nett_Extent",    "shap_value": 98432.1, "direction": "increases" },
+    { "feature": "Harvest_Total",  "shap_value": 52110.3, "direction": "increases" },
+    { "feature": "Sown_Total",     "shap_value": 38900.7, "direction": "increases" },
+    { "feature": "Yield_Avg",      "shap_value": 21450.2, "direction": "increases" },
+    { "feature": "Season",         "shap_value": -5823.6, "direction": "decreases" }
+  ],
+  "model_used": "CatBoost"
+}
+```
+
+`shap_value` = how many MT this feature **adds or subtracts** from the base prediction.
+`direction` = `"increases"` (positive) or `"decreases"` (negative).
+
+---
+
+## 3. Input Field Reference
+
+| Field | Label (English) | Label (Sinhala) | Unit | Type | Nullable |
+|---|---|---|---|---|---|
+| `Year` | Year | වර්ෂය | — | Integer (2005–2030) | No |
+| `Season` | Season | කන්නය | — | "Yala" or "Maha" | No |
+| `District` | District | දිස්ත්‍රික්කය | — | String (see list) | No |
+| `Sown_Major` | Major Scheme — Sown Extent | ප්‍රධාන යෝජනා ක්‍රමය — බිම් කොටස (හෙ.) | Hectares | Float | Yes |
+| `Sown_Minor` | Minor Scheme — Sown Extent | කුඩා යෝජනා ක්‍රමය — බිම් කොටස (හෙ.) | Hectares | Float | Yes |
+| `Sown_Rainfed` | Rain-fed — Sown Extent | වර්ෂාපෝෂිත — බිම් කොටස (හෙ.) | Hectares | Float | Yes |
+| `Sown_Total` | Total Sown Extent | මුළු වගා කළ බිම් කොටස (හෙ.) | Hectares | Float | Yes |
+| `Harvest_Major` | Major Scheme — Harvested | ප්‍රධාන — අස්වනු කළ බිම් (හෙ.) | Hectares | Float | Yes |
+| `Harvest_Minor` | Minor Scheme — Harvested | කුඩා — අස්වනු කළ බිම් (හෙ.) | Hectares | Float | Yes |
+| `Harvest_Rainfed` | Rain-fed — Harvested | වර්ෂාපෝෂිත — අස්වනු කළ (හෙ.) | Hectares | Float | Yes |
+| `Harvest_Total` | Total Harvested Extent | මුළු අස්වනු කළ බිම් (හෙ.) | Hectares | Float | Yes |
+| `Yield_Major` | Major Scheme — Average Yield | ප්‍රධාන — සාමාන්‍ය අස්වනු (kg/ha) | kg/ha | Float | Yes |
+| `Yield_Minor` | Minor Scheme — Average Yield | කුඩා — සාමාන්‍ය අස්වනු (kg/ha) | kg/ha | Float | Yes |
+| `Yield_Rainfed` | Rain-fed — Average Yield | වර්ෂාපෝෂිත — සාමාන්‍ය අස්වනු (kg/ha) | kg/ha | Float | Yes |
+| `Yield_Avg` | Overall Average Yield | සාමාන්‍ය අස්වනු (kg/ha) | kg/ha | Float | Yes |
+| `Nett_Extent` | Net Harvested Extent | නිශ්චිත අස්වනු කළ බිම් (හෙ.) | Hectares | Float | Yes |
+
+> ℹ️ **Note**: All nullable fields can be left blank. The model will use historical median values for that district automatically.
+
+---
+
+## 4. District List (All 29 Districts)
+
+Use these **exact string values** for the `District` field:
+
+```
+AMPARA, ANURADHAPURA, BADULLA, BATTICALOA, COLOMBO,
+GALLE, GAMPAHA, HAMBANTOTA, JAFFNA, KALUTARA,
+KANDY, KEGALLE, KILLINOCHCHI, KURUNEGALA, MAHAWELI_H,
+MANNAR, MATALE, MATARA, MONARAGALA, MULATIVU,
+NUWARAELIYA, POLONNARUWA, PUTTALAM, RATNAPURA,
+TRINCOMALEE, UDA_WALAWE, VAVUNIYA
+```
+
+**Sinhala District Names (for display):**
+
+| API Value | Sinhala |
+|---|---|
+| AMPARA | අම්පාර |
+| ANURADHAPURA | අනුරාධපුරය |
+| BADULLA | බදුල්ල |
+| BATTICALOA | මඩකළපුව |
+| COLOMBO | කොළඹ |
+| GALLE | ගාල්ල |
+| GAMPAHA | ගම්පහ |
+| HAMBANTOTA | හම්බන්තොට |
+| JAFFNA | යාපනය |
+| KALUTARA | කළුතර |
+| KANDY | මහනුවර |
+| KEGALLE | කෑගල්ල |
+| KILLINOCHCHI | කිලිනොච්චිය |
+| KURUNEGALA | කුරුණෑගල |
+| MAHAWELI_H | මහවැලි H කලාපය |
+| MANNAR | මන්නාරම |
+| MATALE | මාතලේ |
+| MATARA | මාතර |
+| MONARAGALA | මොනරාගල |
+| MULATIVU | මුලතිව් |
+| NUWARAELIYA | නුවරඑළිය |
+| POLONNARUWA | පොළොන්නරුව |
+| PUTTALAM | පුත්තලම |
+| RATNAPURA | රත්නපුර |
+| TRINCOMALEE | ත්‍රිකෝණමලේ |
+| UDA_WALAWE | උඩවලව |
+| VAVUNIYA | වව්නියාව |
+
+---
+
+## 5. Pages & Layout
+
+### Page 1 — Home / Landing
+
+**Purpose**: Welcome farmers, explain the tool, show quick stats.
+
+**Sections**:
+- Hero: Bold headline in English + Sinhala, green gradient background, paddy field image
+- "How it works" — 3 steps: Enter Details → Get Prediction → Understand Results
+- Key facts: Model accuracy (R² = 0.9913), years of data (2005–2023), districts covered (27)
+- CTA button: **"Start Prediction → / පුරෝකථනය ආරම්භ කරන්න"**
+
+---
+
+### Page 2 — Prediction Form
+
+**Purpose**: Input form → show result + SHAP explanation in one page.
+
+#### Section A: Basic Info (always required)
+- Year: Number input or slider (2005–2030)
+- Season: Large toggle/radio buttons — **"Yala 🌞"** | **"Maha 🌧️"**
+- District: Searchable dropdown (English + Sinhala)
+
+#### Section B: Cultivation Data (optional — collapsible)
+Grouped into 3 accordion panels:
+
+**Panel 1 — Sown Extent (හෙක්ටයාර්)**
+- Sown_Major, Sown_Minor, Sown_Rainfed, Sown_Total
+
+**Panel 2 — Harvested Extent (හෙක්ටයාර්)**
+- Harvest_Major, Harvest_Minor, Harvest_Rainfed, Harvest_Total, Nett_Extent
+
+**Panel 3 — Yield (kg/ha)**
+- Yield_Major, Yield_Minor, Yield_Rainfed, Yield_Avg
+
+#### Section C: Result Card (shown after prediction)
+- 🌾 Predicted Production prominently: **"261,938 MT"**
+- Sub-label: "Predicted Total Paddy Production / අනාවැකි මුළු වී නිෂ්පාදනය"
+- Model confidence badge (R² = 0.9913)
+- "Explain this prediction" button → triggers `/explain` call
+
+#### Section D: SHAP Explanation (show after clicking Explain)
+- Header: "Why did the model predict this? / ඇයි මෙම අගය?"
+- Horizontal bar chart of top 5 features:
+  - Green bars → features that **increase** production
+  - Red bars → features that **decrease** production
+  - Label each bar with feature name + SHAP value in MT
+- Base value annotation: "Without any specific inputs, the baseline prediction is {base_value_mt} MT"
+
+---
+
+### Page 3 — About / Model Info
+
+**Sections**:
+- What is this tool? (paragraph)
+- Model performance table
+
+| Metric | Value |
+|---|---|
+| Model | CatBoostRegressor |
+| Test R² | 0.9913 (99.1% accuracy) |
+| Test RMSE | 8,785 MT |
+| Test MAE | 3,862 MT |
+| Training data | 2005–2020 (826 records) |
+| Test data | 2021–2023 (147 records) |
+
+- Important disclaimer for farmers: predictions are AI-based estimates; verify with agricultural officers
+
+---
+
+## 6. Design Guidelines
+
+### Colour Palette
+
+| Token | Hex | Usage |
+|---|---|---|
+| `primary-green` | `#2d6a4f` | Buttons, headers, navbar |
+| `light-green` | `#52b788` | Accents, section highlights |
+| `gold` | `#e9c46a` | Result highlight, CTA |
+| `amber` | `#f4a261` | Warning, rain-fed labels |
+| `dark` | `#1b4332` | Dark backgrounds |
+| `surface` | `#f0faf4` | Page background |
+| `white` | `#ffffff` | Cards |
+| `danger` | `#e63946` | Decrease SHAP bars, errors |
+
+### Typography
+- Font: **`Noto Sans Sinhala`** (supports Sinhala + English), fallback: `Inter`
+- Load from Google Fonts: `Noto Sans Sinhala:wght@400;600;700` + `Inter:wght@400;600;700`
+- Headings: Bold, dark green
+- Body: Regular, `#333`
+
+### Design Style
+- **Mobile-first responsive** (farmers primarily use phones)
+- Glassmorphism cards with subtle green shadow
+- Smooth transitions (300ms ease)
+- Season toggle should feel tactile and satisfying
+- Loading spinner during API calls (prediction takes ~1 second)
+- Error messages in both English and Sinhala
+
+### Icons (use any free icon library, e.g. Lucide or FontAwesome)
+- 🌾 Rice/wheat icon for production results
+- 🌞 Sun for Yala season
+- 🌧️ Rain for Maha season
+- 📍 Pin icon for district
+- 📊 Chart icon for SHAP explanation
+- ✅ Check for success
+
+---
+
+## 7. Error Handling
+
+| Scenario | Message (EN) | Message (SI) |
+|---|---|---|
+| API not reachable | "Server is offline. Please try again later." | "සේවාදායකය ක්‍රියා නොකරයි." |
+| Missing required field | "Please select District, Season, and Year." | "දිස්ත්‍රික්කය, කන්නය සහ වර්ෂය තෝරන්න." |
+| Unexpected error | "Something went wrong. Please contact support." | "දෝෂයක් ඇත. නැවත උත්සාහ කරන්න." |
+| Prediction = 0 | "Insufficient data for this combination." | "ප්‍රමාණවත් දත්ත නොමැත." |
+
+---
+
+## 8. Recommended Tech Stack
+
+| Layer | Recommended | Alternatives |
+|---|---|---|
+| Framework | React + Vite | Next.js, plain HTML |
+| Styling | Tailwind CSS or plain CSS | Bootstrap |
+| Charts (SHAP bars) | Recharts or Chart.js | D3.js, Nivo |
+| HTTP client | Axios or fetch | — |
+| Deployment | Vercel / Netlify | GitHub Pages |
+
+---
+
+## 9. API Integration Example (JavaScript)
+
+```javascript
+// Predict
+const response = await fetch('http://localhost:8000/predict', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    Year: 2023,
+    Season: 'Yala',
+    District: 'AMPARA',
+    Nett_Extent: 60377,
+    Harvest_Total: 63176,
+    Yield_Avg: 4338,
+    Sown_Total: 63184,
+    // All other fields are optional
+  }),
+});
+const data = await response.json();
+console.log(data.predicted_total_production_mt); // e.g. 261938.0
+
+// Explain
+const explainRes = await fetch('http://localhost:8000/explain', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ /* same body */ }),
+});
+const explain = await explainRes.json();
+// explain.top_features → array of { feature, shap_value, direction }
+```
+
+---
+
+## 10. Minimum Viable Screens (priority order)
+
+1. **Prediction Form** → most important, farmers use this daily
+2. **Result + SHAP display** → shown on same page after submit
+3. **Home / Landing** → trust-building, onboarding
+4. **About / Accuracy** → for agricultural officers
+
+---
+
+## 11. Sample SHAP Chart Rendering
+
+For the SHAP horizontal bar chart, render each feature like this:
+
+```
+Nett_Extent     ████████████████████  +25,652 MT  ✅ increases
+Harvest_Total   ████████████          +13,576 MT  ✅ increases
+Sown_Total      ████████              +10,792 MT  ✅ increases
+Yield_Avg       █████                 +7,415 MT   ✅ increases
+Season          ██                    -1,333 MT   ❌ decreases
+```
+
+Green bars (positive SHAP) = this input increased predicted production.
+Red bars (negative SHAP) = this input decreased predicted production.
+
+---
+
+## 12. Contact / Handoff Notes
+
+- The **backend API is already built and tested** — no changes needed
+- The API auto-handles missing numeric values (median imputation)
+- CORS is enabled on the backend — any frontend origin can connect
+- For production deployment: update `http://localhost:8000` to the live server URL
+- The model achieves **R² = 0.9913** — safe to show "99% accuracy" in marketing copy
+
+---
+
+*Generated from the CatBoost ML pipeline trained on Sri Lanka Department of Census and Statistics Paddy Data (2005–2023).*
